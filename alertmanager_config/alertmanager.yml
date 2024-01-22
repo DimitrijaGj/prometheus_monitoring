@@ -1,16 +1,33 @@
-route:
-  group_by: ['alertname']
-  group_wait: 30s
-  group_interval: 5m
-  repeat_interval: 1h
-  receiver: 'web.hook'
+global:
+  resolve_timeout: 5m
+  http_config:
+    follow_redirects: true
+    enable_http2: true
+
 receivers:
-  - name: 'web.hook'
-    webhook_configs:
-      - url: 'http://127.0.0.1:5001/'
-inhibit_rules:
-  - source_match:
-      severity: 'critical'
-    target_match:
-      severity: 'warning'
-    equal: ['alertname', 'dev', 'instance']
+- name: 'team_alpha'
+  opsgenie_configs:
+      - api_url: 'https://api.opsgenie.com/'
+        api_key: 'ed62f811-4812-4679-8a64-f7c9a360c6fa'
+        send_resolved: true
+        #priority: '[[ with $alert := index .Alerts 0 ]][[ range $alert.Labels.SortedPairs]][[ if eq .Name "severity" ]][[ .Value ]][[ end ]][[ end ]][[ end ]]'
+
+- name: 'team_beta'
+  opsgenie_configs:
+      - api_url: 'https://api.opsgenie.com/'
+        api_key: '90b53bb1-176d-4ff7-b69d-1c2447a3c7b6'
+        #priority: '{{ if eq .GroupLabels.severity "P1"}}P1{{else if eq .GroupLabels.severity "P2"}}P2{{else}}P3{{end}}'
+
+route:
+  receiver: 'team_alpha'
+  routes:
+  - receiver: 'team_beta'
+    match:
+      alertname: 'high_load'
+    continue: false
+
+#webhook_configs:
+#    - url: 'https://api.opsgenie.com/v2/alerts'
+#      http_config:
+#        bearer_token: 'ed62f811-4812-4679-8a64-f7c9a360c6fa'
+#      send_resolved: true
